@@ -34,5 +34,20 @@ If everything works, you can visit your web-app using the address
 
 # cleanup
 
-docker rm -vf $(docker ps -aq)
-docker rmi -f $(docker images -aq)
+To check the status of your running container you may press:
+
+`docker ps`
+
+To stop a running container you can use:
+
+`docker stop <CONTAINER ID>`
+
+You can find the `<CONTAINER ID>` in the first column of the output
+of `docker ps`.
+
+To remove all containers and all images (please stop the containers first)
+you may use:
+
+`docker rm -vf $(docker ps -aq)`
+
+`docker rmi -f $(docker images -aq)`
