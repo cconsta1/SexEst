@@ -1,8 +1,7 @@
-# Flasgger API
+# SexEst web application
 
-docker build -t sexest .
-
-docker run -p 8000:8000 sexest
+This is the source code for the SexEst web application.
+The live version of the application can be found [here](http://sexest.cyi.ac.cy/).
 
 # streamlit app
 
