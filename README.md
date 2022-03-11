@@ -32,6 +32,25 @@ web application by running:
 If everything works, you can visit your web-app using the address
 `http://localhost:8501/` in your browser.
 
+# Running the Docker Image as a container on a web server
+
+Assuming that you already installed docker on your webserver 
+(`sudo apt-get install docker.io` should work), you can build the 
+image in the same way as you would build it locally:
+
+`docker build -f Dockerfile -t app:latest .`
+
+You may then run the image as a container on the webserver:
+
+`docker run --restart always -p 80:8501 app:latest`
+
+We use the flag `--restart` and we set it to `always` to ensure that
+if the server goes down for whatever reason, the image will be run
+automatically as soon as the server is back up again. 
+
+The web app will now be accessible from the IP address of the webserver.
+
+
 # cleanup
 
 To check the status of your running container you may press:
