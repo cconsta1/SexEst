@@ -113,16 +113,16 @@ st.markdown(browse_button_configuration, unsafe_allow_html=True)
 
 # Loading the Goldman models and their accuracy
 
-xgb_model_goldman = pickle.load(open("model_xgb_goldman.dat", "rb"))
-accuracy_file_xgb_model_goldman = open("model_xgb_goldman.txt", "r")
+xgb_model_goldman = pickle.load(open("./models_goldman/model_xgb_goldman.dat", "rb"))
+accuracy_file_xgb_model_goldman = open("./models_goldman/model_xgb_goldman.txt", "r")
 accuracy_xgb_model_goldman = float(accuracy_file_xgb_model_goldman.read()) * 100
 
-lgb_model_goldman = pickle.load(open("model_lgb_goldman.dat", "rb"))
-accuracy_file_lgb_model_goldman = open("model_lgb_goldman.txt", "r")
+lgb_model_goldman = pickle.load(open("./models_goldman/model_lgb_goldman.dat", "rb"))
+accuracy_file_lgb_model_goldman = open("./models_goldman/model_lgb_goldman.txt", "r")
 accuracy_lgb_model_goldman = float(accuracy_file_lgb_model_goldman.read()) * 100
 
-lda_model_goldman = pickle.load(open("model_lda_goldman.dat", "rb"))
-accuracy_file_lda_model_goldman = open("model_lda_goldman.txt", "r")
+lda_model_goldman = pickle.load(open("./models_goldman/model_lda_goldman.dat", "rb"))
+accuracy_file_lda_model_goldman = open("./models_goldman/model_lda_goldman.txt", "r")
 accuracy_lda_model_goldman = float(accuracy_file_lda_model_goldman.read()) * 100
 
 # Goldman independent variables needed for the DataFrames
@@ -131,16 +131,16 @@ columns_goldman = ["BIB", "HML", "HHD", "RML", "FML", "FBL", "FHD", "TML"]
 
 # Loading the Howells models and their accuracy
 
-xgb_model_howell = pickle.load(open("model_xgb_howell.dat", "rb"))
-accuracy_file_xgb_model_howell = open("model_xgb_howell.txt", "r")
+xgb_model_howell = pickle.load(open("./models_howell/model_xgb_howell.dat", "rb"))
+accuracy_file_xgb_model_howell = open("./models_howell/model_xgb_howell.txt", "r")
 accuracy_xgb_model_howell = float(accuracy_file_xgb_model_howell.read()) * 100
 
-lgb_model_howell = pickle.load(open("model_lgb_howell.dat", "rb"))
-accuracy_file_lgb_model_howell = open("model_lgb_howell.txt", "r")
+lgb_model_howell = pickle.load(open("./models_howell/model_lgb_howell.dat", "rb"))
+accuracy_file_lgb_model_howell = open("./models_howell/model_lgb_howell.txt", "r")
 accuracy_lgb_model_howell = float(accuracy_file_lgb_model_howell.read()) * 100
 
-lda_model_howell = pickle.load(open("model_lda_howell.dat", "rb"))
-accuracy_file_lda_model_howell = open("model_lda_howell.txt", "r")
+lda_model_howell = pickle.load(open("./models_howell/model_lda_howell.dat", "rb"))
+accuracy_file_lda_model_howell = open("./models_howell/model_lda_howell.txt", "r")
 accuracy_lda_model_howell = float(accuracy_file_lda_model_howell.read()) * 100
 
 # logreg_model_howell = pickle.load(open("logreg_model_howell.dat", "rb"))
