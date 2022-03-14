@@ -18,7 +18,7 @@ in your terminal:
 
 
 
-# Building the Docker Image
+# Building the docker image
 
 Once docker is setup on your machine, you may clone this repository
 to your local directory. 
@@ -28,7 +28,7 @@ by running the command:
 
 `docker build -f Dockerfile -t app:latest .`
 
-# Running the Docker Image as a container locally
+# Running the docker image as a container locally
 
 Once the image has been built, you can run a local instance of the *SexEst*
 web application by running:
@@ -38,7 +38,7 @@ web application by running:
 If everything works, you can visit your web-app using the address
 `http://localhost:8501/` in your browser.
 
-# Running the Docker Image as a container on a web server
+# Running the docker image as a container on a web server
 
 Assuming that you have already installed docker on your webserver 
 (`sudo apt-get install docker.io` should work), you can build the 
