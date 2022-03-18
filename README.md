@@ -76,3 +76,8 @@ you may use:
 `docker rm -vf $(docker ps -aq)`
 
 `docker rmi -f $(docker images -aq)`
+
+# Creating the models
+
+Example notebooks to produce the models needed within the 
+the SexEst web application can be found [here](https://github.com/cconsta1/SexEst_Notebooks).
