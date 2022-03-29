@@ -16,15 +16,20 @@ in your terminal:
 
 `sudo apt-get install docker.io`
 
-
-
 # Building the docker image
 
 Once docker is setup on your machine, you may clone this repository
-to your local directory. 
+to your local directory. You may do that by typing the following command
+in your terminal:
 
-Once the repository is cloned, you can build the Docker image 
-by running the command:
+`git clone https://github.com/cconsta1/SexEst.git`
+
+You can then navigate to the SexEst directory:
+
+`cd SexEst`
+
+Once the repository is cloned and you have naviagated inside the SexEst directory, 
+you can build the Docker image by running the command:
 
 `docker build -f Dockerfile -t app:latest .`
 
@@ -77,7 +82,7 @@ you may use:
 
 `docker rmi -f $(docker images -aq)`
 
-# Creating the models
+# Creating the model files
 
 Example notebooks to produce the models needed within the 
 the SexEst web application can be found [here](https://github.com/cconsta1/SexEst_Notebooks).
