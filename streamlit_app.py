@@ -276,12 +276,14 @@ Instructions on how to use SexEst can be found by pressing the
 application appear when pressing the **Contact** button.
 
 
-SexEst was funded by a National Institute of Justice Grant
-([2015-DN-BX-K014](https://nij.ojp.gov/funding/awards/2015-dn-bx-k014)). 
-The development of SexEst was also supported by the [NI4OS-Europe](https://ni4os.eu/) project, 
-which is funded by the European Commission under the Horizon 2020 
-European research infrastructures grant 
-agreement no. [857645](https://cordis.europa.eu/project/id/857645).
+SexEst was supported by the NI4OS-Europe project, funded by the
+European Commission under the Horizon 2020 European Research
+Infrastructures grant agreement no. 857645. EN's contribution was
+co-funded by the European Regional Development Fund and the
+Republic of Cyprus through the Research and Innovation Foundation
+[Project: EXCELLENCE/1216/0023]. This project has also received
+funding from the European Union's Horizon 2020 Research and 
+Innovation Program under the grant agreement no. 811068.
 
 
 **Disclaimer:** This application is freely provided as an aid for 
