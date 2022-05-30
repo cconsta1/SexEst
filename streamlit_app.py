@@ -14,6 +14,7 @@
  + 11/23/21 (cc): Added a configuration file to beautify the app
  + 12/18/21 (cc): Added missing data tabs and functionality
  + 03/29/22 (cc): Added Google Analytics functionality
+ + 05/30/22 (cc): Added 3 independent variables to the postcranial models
 """
 
 from datetime import time
@@ -88,7 +89,7 @@ def inject_ga():
         index_path.write_text(new_html)
 
 
-inject_ga()
+#inject_ga()
 
 button_configuration = f"""
 <style>
@@ -171,7 +172,7 @@ accuracy_lda_model_goldman = float(accuracy_file_lda_model_goldman.read()) * 100
 
 # Goldman independent variables needed for the DataFrames
 
-columns_goldman = ["BIB", "HML", "HHD", "RML", "FML", "FBL", "FHD", "TML"]
+columns_goldman = ["BIB", "HML", "HHD", "RML", "FML", "FBL", "FHD", "TML", "FEB", "TPB", "HEB"]
 
 # Loading the Howells models and their accuracy
 
@@ -415,7 +416,7 @@ Selecting one of the multiple skeleton modes from the sidebar
 allows users to upload a CSV file containing measurements from multiple 
 skeletons so that sex is predicted for all of them simultaneously. 
 The file format must follow the example files given at the bottom of this page. 
-The file header must contain the names of the 8 postcranial variables or the 
+The file header must contain the names of the 11 postcranial variables or the 
 32 cranial variables specified in the example files. All measurements must be in 
 millimeters (mm). The CSV file can be uploaded using the drag and 
 drop feature or by 
@@ -424,7 +425,7 @@ must select a model (XGB, LGB, LDA), and press the Calculate button.
 The application will output the predicted result as a table divided into a 
 Male and a Female column containing the probability that each skeleton in the 
 file belongs to a male or a female individual. Note that any rows containing 
-missing data will be dropped as the models are optimized to use all 8 variables 
+missing data will be dropped as the models are optimized to use all 11 variables 
 for osteometric and all 32 variables for craniometric datasets, respectively. 
 In cases of missing data, SexEst provides alternative modes (see details below).
 
@@ -434,7 +435,7 @@ Prediction (missing data)**) offer the possibility to make predictions when
 one or more variables are missing. These tabs are similar to the single 
 skeleton modes; however, the user can now enter even a single variable and 
 get a sex prediction. For postcranial data, the user can enter any combination 
-of one, two, etc. out of the 8 measurements, while for the craniometric data we 
+of one, two, etc. out of the 11 measurements, while for the craniometric data we 
 have selected 10 out of the original 32 variables, which are most commonly 
 employed in other studies of population-specific metric sex estimation, namely 
 **GOL, BNL, BBH, XCB, ZYB, BPL, NLH, NLB, MDH,** and **FOL**. All entered measurements 
@@ -502,8 +503,11 @@ with st.sidebar.expander("Osteometric Prediction (single skeleton)"):
     FBL = st.number_input("FBL", min_value=0.0, max_value=599.0, value=0.0, step=0.5)
     FHD = st.number_input("FHD", min_value=0.0, max_value=599.0, value=0.0, step=0.5)
     TML = st.number_input("TML", min_value=0.0, max_value=599.0, value=0.0, step=0.5)
+    FEB = st.number_input("FEB", min_value=0.0, max_value=599.0, value=0.0, step=0.5)
+    TPB = st.number_input("TPB", min_value=0.0, max_value=599.0, value=0.0, step=0.5)
+    HEB = st.number_input("HEB", min_value=0.0, max_value=599.0, value=0.0, step=0.5)
 
-    input_vector_goldman = [[BIB, HML, HHD, RML, FML, FBL, FHD, TML]]
+    input_vector_goldman = [[BIB, HML, HHD, RML, FML, FBL, FHD, TML, FEB, TPB, HEB]]
 
     input_vector_goldman = np.asarray(input_vector_goldman, dtype="float64")
 
@@ -542,7 +546,7 @@ with st.sidebar.expander("Osteometric Prediction (single skeleton)"):
                 your variables and select a model.
 
                 Please note that these models have been optimized to work with 
-                all 8 variables submitted. You can try 
+                all 11 variables submitted. You can try 
                 the **Osteometric Prediction (missing data)** mode 
                 if you have missing data. 
                 """
@@ -554,7 +558,7 @@ with st.sidebar.expander("Osteometric Prediction (single skeleton)"):
                 Some variables are missing.
 
                 Please note that these models have been optimized to work with 
-                all 8 variables submitted. You can try 
+                all 11 variables submitted. You can try 
                 the **Osteometric Prediction (missing data)** mode 
                 if you have missing data.
                 """
@@ -819,7 +823,7 @@ with st.sidebar.expander("Osteometric Prediction (multiple skeletons)"):
     if uploaded_file_goldman is not None:
         try:
             df_goldman_file = pd.read_csv(
-                uploaded_file_goldman, usecols=[0, 1, 2, 3, 4, 5, 6, 7]
+                uploaded_file_goldman, usecols=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             )
         except ValueError:
             placeholder_write_welcome.empty()
@@ -914,7 +918,7 @@ with st.sidebar.expander("Osteometric Prediction (multiple skeletons)"):
                 """
                 Please note that any rows containing missing data 
                 will be dropped as these models have been optimized to 
-                work with all 8 variables submitted. You can try the 
+                work with all 11 variables submitted. You can try the 
                 **Osteometric Prediction (missing data)** mode for 
                 any cases/rows containing missing data.
 
@@ -1099,8 +1103,11 @@ with st.sidebar.expander("Osteometric Prediction (missing data)"):
     FBL = st.number_input("FBL", min_value=0.0, max_value=600.0, value=0.0, step=0.5)
     FHD = st.number_input("FHD", min_value=0.0, max_value=600.0, value=0.0, step=0.5)
     TML = st.number_input("TML", min_value=0.0, max_value=600.0, value=0.0, step=0.5)
+    FEB = st.number_input("FEB", min_value=0.0, max_value=600.0, value=0.0, step=0.5)
+    TPB = st.number_input("TPB", min_value=0.0, max_value=600.0, value=0.0, step=0.5)
+    HEB = st.number_input("HEB", min_value=0.0, max_value=600.0, value=0.0, step=0.5)
 
-    input_vector_goldman_missing = [[BIB, HML, HHD, RML, FML, FBL, FHD, TML]]
+    input_vector_goldman_missing = [[BIB, HML, HHD, RML, FML, FBL, FHD, TML, FEB, TPB, HEB]]
 
     input_vector_goldman_missing = np.asarray(
         input_vector_goldman_missing, dtype="float64"

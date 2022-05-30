@@ -38,7 +38,7 @@ you can build the Docker image by running the command:
 Once the image has been built, you can run a local instance of the *SexEst*
 web application by running:
 
-`docker run -p 8501:8501 app:latest`
+`docker run -p 8501:8501 app:latest &`
 
 If everything works, you can visit your web-app using the address
 `http://localhost:8501/` in your browser.
