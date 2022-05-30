@@ -618,7 +618,7 @@ with st.sidebar.expander("Osteometric Prediction (single skeleton)"):
                 which optimized the model's 
                 hyperparameters and cross-validated it. The trained 
                 model was then tested using the test set, 
-                achieving an accuracy of {accuracy:.2f}%._ _  
+                achieving an accuracy of {accuracy:.2f}%.__  
             """.format(
                     male=predict_proba_goldman[0],
                     female=predict_proba_goldman[1],
