@@ -1,88 +1,61 @@
-# SexEst web application
+# SexEst
 
-This is the source code for the SexEst web application.
-The live version of the application can be found [here](http://sexest.cyi.ac.cy/).
+Live demo: http://sexest.cyi.ac.cy/  
+Paper / DOI: https://doi.org/10.1002/oa.3109
 
-The source code runs inside 
-a docker container on your local machine or a web-server.
-Because the web application uses Docker, it is 
-assumed that Docker is installed on your machine or the web server
-that will host the application.
-Instructions on how to install Docker on a *Mac* can be found 
-[here](https://docs.docker.com/desktop/mac/install/) and for 
-*Ubuntu* [here](https://docs.docker.com/engine/install/ubuntu/).
-Additionally, still for *Ubuntu*, you may try using the following command
-in your terminal:
+Short description
+- SexEst is an open-source Streamlit web application for predicting biological sex from skeletal measurements using pre-trained machine learning models (XGBoost, LightGBM, Linear Discriminant Analysis).
 
-`sudo apt-get install docker.io`
+Background
+- Skeletal sex estimation is an essential step in osteoarchaeological and forensic contexts. This project (1) evaluates multiple machine-learning classifiers on worldwide cranial and postcranial measurements and (2) deploys the best-performing models in a free web application for straightforward sex prediction of unknown skeletons. Selected text from the paper: “Skeletal sex estimation is an essential step in any osteoarcheological study... The models offering the highest rates of correct sex classification (Extreme Gradient Boosting, Light Gradient Boosting, and Linear Discriminant Analysis) were then selected to construct an open access and open source web application, SexEst.”
 
-# Building the docker image
+Key links
+- Live app: http://sexest.cyi.ac.cy/
+- Paper / DOI: https://doi.org/10.1002/oa.3109
+- Model training notebooks: https://github.com/cconsta1/SexEst_Notebooks.git
+- Original datasets (Goldman & Howells): https://web.utk.edu/~auerbach/DATA.htm
 
-Once docker is setup on your machine, you may clone this repository
-to your local directory. You may do that by typing the following command
-in your terminal:
+What is in this repository
+- `streamlit_app.py` — Streamlit web UI and inference logic (loads pre-trained models and shows predictions).
+- `models_goldman/`, `models_howell/` — pre-trained model metadata (and in some cases model files).
+- `sample_dataset_craniometric.csv`, `sample_dataset_osteometric.csv` — example input files.
+- `requirements.txt` — Python dependencies required to run the app locally.
+- `LICENSE` — Apache License 2.0 (this repository is distributed under Apache 2.0).
 
-`git clone https://github.com/cconsta1/SexEst.git`
+Quickstart — run locally
+1. Create a virtual environment and install dependencies:
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+2. Run the Streamlit app:
+```bash
+streamlit run streamlit_app.py
+```
+3. Open http://localhost:8501/ in your browser.
 
-You can then navigate to the SexEst directory:
+Docker (optional)
+- A `Dockerfile` is included for building a containerized version of the app. To build and run the image:
+```bash
+docker build -f Dockerfile -t app:latest .
+docker run -p 8501:8501 app:latest
+```
+Visit http://localhost:8501/ (or the mapped host port) once the container is running.
 
-`cd SexEst`
+Notes on models and data
+- The app uses pre-trained models; training notebooks used to produce those models are available at https://github.com/cconsta1/SexEst_Notebooks.git. The original training datasets (Goldman osteometric and Howells craniometric) are freely available from Dr. B. Auerbach: https://web.utk.edu/~auerbach/DATA.htm — please follow the dataset owners' citation guidelines if you reuse the data.
+- Please do not modify or replace the packaged models in `models_*` unless you intend to retrain and version them appropriately.
 
-Once the repository is cloned and you have naviagated inside the SexEst directory, 
-you can build the Docker image by running the command:
+Contributing
+- See `CONTRIBUTING.md` for guidance on reporting issues, documentation edits, and reproducing the analysis.
 
-`docker build -f Dockerfile -t app:latest .`
+Recommended housekeeping
+- Add a `.gitignore` to avoid committing virtual environments, caches, or large model binaries.
+- Consider adding badges (license, demo link) and an explicit `DATA_AVAILABILITY.md` to document the provenance and citation of the datasets used.
 
-# Running the docker image as a container locally
+License
+- This repository is licensed under the Apache License 2.0. See `LICENSE` for details.
 
-Once the image has been built, you can run a local instance of the *SexEst*
-web application by running:
-
-`docker run -p 8501:8501 app:latest &`
-
-If everything works, you can visit your web-app using the address
-`http://localhost:8501/` in your browser.
-
-# Running the docker image as a container on a web server
-
-Assuming that you have already installed docker on your webserver 
-(`sudo apt-get install docker.io` should work), you can build the 
-image in the same fashion as you would build it locally:
-
-`docker build -f Dockerfile -t app:latest .`
-
-You may then run the image as a container on the webserver:
-
-`docker run --restart always -p 80:8501 app:latest`
-
-We use the flag `--restart` and we set it to `always` to ensure that
-if the server goes down for whatever reason the image will be run
-automatically as soon as the server is back up again. 
-
-The web app will now be accessible from the IP address assigned
-to your webserver.
-
-# Cleanup
-
-To check the status of your running container you may use the command:
-
-`docker ps`
-
-To stop a running container you can use the command:
-
-`docker stop <CONTAINER ID>`,
-
-where the `<CONTAINER ID>` can be found in the first column of the output
-of `docker ps`.
-
-To remove all containers and all images (stop the containers first)
-you may use:
-
-`docker rm -vf $(docker ps -aq)`
-
-`docker rmi -f $(docker images -aq)`
-
-# Creating the model files
-
-Example notebooks to produce the models needed within the 
-the SexEst web application can be found [here](https://github.com/cconsta1/SexEst_Notebooks).
+Contact & citation
+- If you use SexEst for research, please cite the associated paper: https://doi.org/10.1002/oa.3109

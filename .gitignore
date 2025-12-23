@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+.venv/
+pip-wheel-metadata/
+*.egg-info/
+
+# Virtualenv
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# IDEs
+.idea/
+.vscode/
+
+# Streamlit runtime/config (do not commit user-specific configs)
+.streamlit/
+
+# Models and data
+# Models are intentionally tracked in this repository and are not ignored here.
+# If you need to ignore large local model files, add them to your global gitignore
+# or to a developer-specific ignore (not committed to the repo).
+
+# Logs
+*.log
+
+# Distribution / packaging
+build/
+dist/
+*.egg
