@@ -1,7 +1,7 @@
 # SexEst
 
-Live demo: http://sexest.cyi.ac.cy/  
-Paper / DOI: https://doi.org/10.1002/oa.3109
+> **Live app (primary):** https://sexest.onrender.com/
+> The original CyI-hosted instance (http://sexest.cyi.ac.cy/) is currently experiencing downtime. Use the Render link above.
 
 Short description
 - SexEst is an open-source Streamlit web application for predicting biological sex from skeletal measurements using pre-trained machine learning models (XGBoost, LightGBM, Linear Discriminant Analysis).
@@ -10,7 +10,8 @@ Background
 - Skeletal sex estimation is an essential step in osteoarchaeological and forensic contexts. This project (1) evaluates multiple machine-learning classifiers on worldwide cranial and postcranial measurements and (2) deploys the best-performing models in a free web application for straightforward sex prediction of unknown skeletons. Selected text from the paper: “Skeletal sex estimation is an essential step in any osteoarcheological study... The models offering the highest rates of correct sex classification (Extreme Gradient Boosting, Light Gradient Boosting, and Linear Discriminant Analysis) were then selected to construct an open access and open source web application, SexEst.”
 
 Key links
-- Live app: http://sexest.cyi.ac.cy/
+- Live app (Render, primary): https://sexest.onrender.com/
+- Live app (CyI, currently down): http://sexest.cyi.ac.cy/
 - Paper / DOI: https://doi.org/10.1002/oa.3109
 - Model training notebooks: https://github.com/cconsta1/SexEst_Notebooks.git
 - Original datasets (Goldman & Howells): https://web.utk.edu/~auerbach/DATA.htm
