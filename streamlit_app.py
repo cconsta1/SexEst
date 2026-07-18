@@ -103,7 +103,7 @@ div.stButton > button:first-child
         box-sizing: border-box;
         width: 100%;
     }}
-<style>
+</style>
 """
 
 st.markdown(button_configuration, unsafe_allow_html=True)
@@ -113,10 +113,10 @@ expander_configuration = f"""
 .streamlit-expanderHeader 
     {{ 
         width: 300px; 
-        justify-content: justify; 
+        justify-content: justify;
         font-size:13px;
     }}
-<style>
+</style>
 """
 
 st.markdown(expander_configuration, unsafe_allow_html=True)
@@ -138,7 +138,7 @@ div.stDownloadButton > button:first-child
         width: 180px;
         margin: 20px
     }}
-<style>
+</style>
 """
 
 st.markdown(download_button_configuration, unsafe_allow_html=True)
@@ -148,10 +148,10 @@ browse_button_configuration = f"""
 div.stUploadButton > button:first-child 
     {{
         border: 1px solid {primaryColor}; 
-        border-radius: 4px 4px 4px 4px; 
+        border-radius: 4px 4px 4px 4px;
         width: 180px;
     }}
-<style>
+</style>
 """
 
 st.markdown(browse_button_configuration, unsafe_allow_html=True)
@@ -240,9 +240,9 @@ st.markdown(title, unsafe_allow_html=True)
 # st.title("SexEst: A sex estimation web application")
 
 welcome_text = """
-<p>
+<p class="sexest-body">
 <style>
-p {text-align: justify; margin: 10px}
+p.sexest-body {text-align: justify; margin: 10px}
 </style>
 
 <hr style = "height:5px; border:none; color:#333; background-color:#333; margin: 10px;" />
@@ -318,6 +318,8 @@ Howells WW. 1995. Who's Who in Skulls. Ethnic Identification of Crania from Meas
 
 <hr style = "height:5px; border:none; color: #333; background-color:#333; margin: 10px;" />
 
+[Paper](https://doi.org/10.1002/oa.3109) · [GitHub](https://github.com/cconsta1/SexEst) · [Notebooks](https://github.com/cconsta1/SexEst_Notebooks) · [Apache-2.0 License](https://github.com/cconsta1/SexEst/blob/master/LICENSE)
+
 </p>
 """
 
@@ -366,9 +368,9 @@ placeholder_write_welcome.markdown(welcome_text, unsafe_allow_html=True)
 # h1 {text-align: center; font-family:"Calibri, sans-serif";}
 
 contact_section = """
-<p>
+<p class="sexest-body">
 <style>
-p {text-align: justify; margin: 10px; width: 744px}
+p.sexest-body {text-align: justify; margin: 10px; width: 744px}
 </style>
 
 <hr style = "height:5px; border:none; color:#333; background-color:#333; margin: 10px;" />
@@ -377,7 +379,7 @@ p {text-align: justify; margin: 10px; width: 744px}
 Assistant Professor in Bioarchaeology, Science and Technology in Archaeology 
 and Culture Research Center (STARC), The Cyprus Institute (<a href="mailto:e.nikita@cyi.ac.cy">e.nikita@cyi.ac.cy</a>) 
 
-Chrysovalantis Constantinou, Computational Scientist, Computation-based Science and Technology Research Center (CaSToRC), The Cyprus Institute (<a href="mailto:ch.constantinou@cyi.ac.cy">ch.constantinou@cyi.ac.cy</a>) 
+Chrysovalantis Constantinou, Computational Scientist, Computation-based Science and Technology Research Center (CaSToRC), The Cyprus Institute (<a href="mailto:cconsta1@alumni.nd.edu">cconsta1@alumni.nd.edu</a>)
 
 <hr style = "height:5px; border:none; color:#333; background-color:#333; margin: 10px;" />
 
@@ -385,9 +387,9 @@ Chrysovalantis Constantinou, Computational Scientist, Computation-based Science 
 """
 
 how_to_section = """
-<p>
+<p class="sexest-body">
 <style>
-p {text-align: justify; margin: 10px}
+p.sexest-body {text-align: justify; margin: 10px}
 </style>
 
 <hr style = "height:5px; border:none; color:#333; background-color:#333; margin: 10px;" />
@@ -849,7 +851,7 @@ with st.sidebar.expander("Osteometric Prediction (multiple skeletons)"):
         key="model_selection_goldman_file",
     )
 
-    if st.button("Calculate ", key="osteometric_file_entry_button"):
+    if st.button("Calculate", key="osteometric_file_entry_button"):
         placeholder_write_welcome.empty()
         placeholder_write_input.empty()
         placeholder_write_result.empty()
