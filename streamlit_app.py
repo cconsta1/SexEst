@@ -2,34 +2,31 @@
  @file streamlit_app.py
  A web app for deploying sex estimation machine learning
  models
- 
+
  Language: python
- 
+
  Chrysovalantis Constantinou
- 
+
  The Cyprus Institute
- 
+
  + 10/28/21 (cc): Created.
  + 11/16/21 (cc): Basic functional version completed
  + 11/23/21 (cc): Added a configuration file to beautify the app
  + 12/18/21 (cc): Added missing data tabs and functionality
  + 03/29/22 (cc): Added Google Analytics functionality
  + 05/30/22 (cc): Added 3 independent variables to the postcranial models
+ + 07/18/26 (cc): Fixed malformed CSS and global style leaks causing
+   sidebar labels to vanish; reworked navigation to use st.session_state
+   so results and screens persist correctly across reruns; cached model
+   loading; refreshed dependencies and contact info; general polish.
 """
 
-from datetime import time
 import numpy as np
 import pickle
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 import toml
 import os
-import pathlib
-# from bs4 import BeautifulSoup
-import logging
-import shutil
-
 
 
 # Web app wide configuration
@@ -38,67 +35,31 @@ st.set_page_config(
     page_title="SexEst",
     page_icon="skull",
     layout="wide"
-    # menu_items =
-    # {
-    #     'Get Help': 'https://www.extremelycoolapp.com/help',
-    #     'Report a bug': "https://www.extremelycoolapp.com/bug",
-    #     'About': "# This is a header. This is an *extremely* cool app!"
-    # }
 )
 
 # Fix the button's sizes by passing CSS rules to the web app
 
 primaryColor = toml.load(".streamlit/config.toml")["theme"]["primaryColor"]
 
-# button_configuration = f"""
-# <style>
-# div.stButton > button:first-child {{ border: 1px solid {primaryColor}; border-radius: 4px 4px 4px 4px; width: 80px;}}
-# <style>
-# """
+sidebar_configuration = """
+<style>
+section[data-testid="stSidebar"]
+    {
+        width: 380px !important;
+    }
+</style>
+"""
 
-# def inject_ga():
-#     GA_ID = "google_analytics"
-
-#     # Note: Please replace the id from G-XXXXXXXXXX to whatever your
-#     # web application's id is. You will find this in your Google Analytics account
-    
-#     GA_JS = """
-#     <!-- Global site tag (gtag.js) - Google Analytics -->
-#     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-#     <script>
-#         window.dataLayer = window.dataLayer || [];
-#         function gtag(){dataLayer.push(arguments);}
-#         gtag('js', new Date());
-
-#         gtag('config', 'G-XXXXXXXXXX');
-#     </script>
-#     """
-
-#     # Insert the script in the head tag of the static template inside your virtual
-#     index_path = pathlib.Path(st.__file__).parent / "static" / "index.html"
-#     logging.info(f'editing {index_path}')
-#     soup = BeautifulSoup(index_path.read_text(), features="html.parser")
-#     if not soup.find(id=GA_ID):  # if cannot find tag
-#         bck_index = index_path.with_suffix('.bck')
-#         if bck_index.exists():
-#             shutil.copy(bck_index, index_path)  # recover from backup
-#         else:
-#             shutil.copy(index_path, bck_index)  # keep a backup
-#         html = str(soup)
-#         new_html = html.replace('<head>', '<head>\n' + GA_JS)
-#         index_path.write_text(new_html)
-
-
-#inject_ga()
+st.markdown(sidebar_configuration, unsafe_allow_html=True)
 
 button_configuration = f"""
 <style>
-div.stButton > button:first-child 
+div.stButton > button:first-child
     {{
-        justify-content: justify; 
-        font-size:13px; 
-        width: 298px; 
-        background: transparent; 
+        justify-content: justify;
+        font-size:13px;
+        width: 378px;
+        background: transparent;
         height:45.5px;
         box-sizing: border-box;
         width: 100%;
@@ -110,9 +71,9 @@ st.markdown(button_configuration, unsafe_allow_html=True)
 
 expander_configuration = f"""
 <style>
-.streamlit-expanderHeader 
-    {{ 
-        width: 300px; 
+.streamlit-expanderHeader
+    {{
+        width: 380px;
         justify-content: justify;
         font-size:13px;
     }}
@@ -121,20 +82,12 @@ expander_configuration = f"""
 
 st.markdown(expander_configuration, unsafe_allow_html=True)
 
-# paragraph_configuration = f"""
-# <style>
-# div.stMarkdownContainer {{ width: 10px;}}
-# <style>
-# """
-
-# st.markdown(paragraph_configuration, unsafe_allow_html=True)
-
 download_button_configuration = f"""
 <style>
-div.stDownloadButton > button:first-child 
-    {{ 
-        border: 1px solid {primaryColor}; 
-        border-radius: 4px 4px 4px 4px; 
+div.stDownloadButton > button:first-child
+    {{
+        border: 1px solid {primaryColor};
+        border-radius: 4px 4px 4px 4px;
         width: 180px;
         margin: 20px
     }}
@@ -145,9 +98,9 @@ st.markdown(download_button_configuration, unsafe_allow_html=True)
 
 browse_button_configuration = f"""
 <style>
-div.stUploadButton > button:first-child 
+div[data-testid="stFileUploader"] section button
     {{
-        border: 1px solid {primaryColor}; 
+        border: 1px solid {primaryColor};
         border-radius: 4px 4px 4px 4px;
         width: 180px;
     }}
@@ -158,17 +111,57 @@ st.markdown(browse_button_configuration, unsafe_allow_html=True)
 
 # Loading the Goldman models and their accuracy
 
-xgb_model_goldman = pickle.load(open("./models_goldman/model_xgb_goldman.dat", "rb"))
-accuracy_file_xgb_model_goldman = open("./models_goldman/model_xgb_goldman.txt", "r")
-accuracy_xgb_model_goldman = float(accuracy_file_xgb_model_goldman.read()) * 100
+has_cache_resource = hasattr(st, "cache_resource")
 
-lgb_model_goldman = pickle.load(open("./models_goldman/model_lgb_goldman.dat", "rb"))
-accuracy_file_lgb_model_goldman = open("./models_goldman/model_lgb_goldman.txt", "r")
-accuracy_lgb_model_goldman = float(accuracy_file_lgb_model_goldman.read()) * 100
 
-lda_model_goldman = pickle.load(open("./models_goldman/model_lda_goldman.dat", "rb"))
-accuracy_file_lda_model_goldman = open("./models_goldman/model_lda_goldman.txt", "r")
-accuracy_lda_model_goldman = float(accuracy_file_lda_model_goldman.read()) * 100
+def _cache_models(func):
+    if has_cache_resource:
+        return st.cache_resource(func)
+    return st.cache(allow_output_mutation=True)(func)
+
+
+@_cache_models
+def load_goldman_models():
+    xgb_model = pickle.load(open("./models_goldman/model_xgb_goldman.dat", "rb"))
+    accuracy_file_xgb = open("./models_goldman/model_xgb_goldman.txt", "r")
+    accuracy_xgb = float(accuracy_file_xgb.read()) * 100
+
+    lgb_model = pickle.load(open("./models_goldman/model_lgb_goldman.dat", "rb"))
+    accuracy_file_lgb = open("./models_goldman/model_lgb_goldman.txt", "r")
+    accuracy_lgb = float(accuracy_file_lgb.read()) * 100
+
+    lda_model = pickle.load(open("./models_goldman/model_lda_goldman.dat", "rb"))
+    accuracy_file_lda = open("./models_goldman/model_lda_goldman.txt", "r")
+    accuracy_lda = float(accuracy_file_lda.read()) * 100
+
+    return xgb_model, accuracy_xgb, lgb_model, accuracy_lgb, lda_model, accuracy_lda
+
+
+@_cache_models
+def load_howell_models():
+    xgb_model = pickle.load(open("./models_howell/model_xgb_howell.dat", "rb"))
+    accuracy_file_xgb = open("./models_howell/model_xgb_howell.txt", "r")
+    accuracy_xgb = float(accuracy_file_xgb.read()) * 100
+
+    lgb_model = pickle.load(open("./models_howell/model_lgb_howell.dat", "rb"))
+    accuracy_file_lgb = open("./models_howell/model_lgb_howell.txt", "r")
+    accuracy_lgb = float(accuracy_file_lgb.read()) * 100
+
+    lda_model = pickle.load(open("./models_howell/model_lda_howell.dat", "rb"))
+    accuracy_file_lda = open("./models_howell/model_lda_howell.txt", "r")
+    accuracy_lda = float(accuracy_file_lda.read()) * 100
+
+    return xgb_model, accuracy_xgb, lgb_model, accuracy_lgb, lda_model, accuracy_lda
+
+
+(
+    xgb_model_goldman,
+    accuracy_xgb_model_goldman,
+    lgb_model_goldman,
+    accuracy_lgb_model_goldman,
+    lda_model_goldman,
+    accuracy_lda_model_goldman,
+) = load_goldman_models()
 
 # Goldman independent variables needed for the DataFrames
 
@@ -176,21 +169,14 @@ columns_goldman = ["BIB", "HML", "HHD", "RML", "FML", "FBL", "FHD", "TML", "FEB"
 
 # Loading the Howells models and their accuracy
 
-xgb_model_howell = pickle.load(open("./models_howell/model_xgb_howell.dat", "rb"))
-accuracy_file_xgb_model_howell = open("./models_howell/model_xgb_howell.txt", "r")
-accuracy_xgb_model_howell = float(accuracy_file_xgb_model_howell.read()) * 100
-
-lgb_model_howell = pickle.load(open("./models_howell/model_lgb_howell.dat", "rb"))
-accuracy_file_lgb_model_howell = open("./models_howell/model_lgb_howell.txt", "r")
-accuracy_lgb_model_howell = float(accuracy_file_lgb_model_howell.read()) * 100
-
-lda_model_howell = pickle.load(open("./models_howell/model_lda_howell.dat", "rb"))
-accuracy_file_lda_model_howell = open("./models_howell/model_lda_howell.txt", "r")
-accuracy_lda_model_howell = float(accuracy_file_lda_model_howell.read()) * 100
-
-# logreg_model_howell = pickle.load(open("logreg_model_howell.dat", "rb"))
-# svm_model_howell = pickle.load(open("svm_model_howell.dat", "rb"))
-# lda_model_howell = pickle.load(open("lda_model_howell.dat", "rb"))
+(
+    xgb_model_howell,
+    accuracy_xgb_model_howell,
+    lgb_model_howell,
+    accuracy_lgb_model_howell,
+    lda_model_howell,
+    accuracy_lda_model_howell,
+) = load_howell_models()
 
 # Howell independent variables needed for the DataFrames
 
@@ -231,13 +217,11 @@ columns_howell = [
 
 title = """
 <h1 style = "padding-top:0px; padding-bottom:0px; text-align: center; margin: 10px;" >
-SexEst: A sex estimation web-application (beta)
+SexEst: A sex estimation web-application
 </h1>
 """
 
 st.markdown(title, unsafe_allow_html=True)
-
-# st.title("SexEst: A sex estimation web application")
 
 welcome_text = """
 <p class="sexest-body">
@@ -248,31 +232,31 @@ p.sexest-body {text-align: justify; margin: 10px}
 <hr style = "height:5px; border:none; color:#333; background-color:#333; margin: 10px;" />
 
 
-Welcome to SexEst, a free, interactive, web application designed 
-to estimate sex using cranial or postcranial linear measurements. 
-Users can either enter manually the measurements for single skeletons 
-or upload data for multiple skeletons stored in a CSV file. 
-Sex estimation is based on three different machine learning 
-classification algorithms: 
+Welcome to SexEst, a free, interactive, web application designed
+to estimate sex using cranial or postcranial linear measurements.
+Users can either enter manually the measurements for single skeletons
+or upload data for multiple skeletons stored in a CSV file.
+Sex estimation is based on three different machine learning
+classification algorithms:
 [Linear Discriminant Analysis](https://scikit-learn.org/stable/modules/generated/sklearn.discriminant_analysis.LinearDiscriminantAnalysis.html) (LDA),
 [Extreme Gradient Boosting](https://xgboost.readthedocs.io/en/stable/) (XGB) and
-[Light Gradient Boosting](https://lightgbm.readthedocs.io/en/latest/) (LGB). 
-The training [datasets](http://volweb.utk.edu/~auerbach/DATA.htm) 
-used in these machine learning classifiers are 
-the William W. Howells craniometric dataset (Howells 1973, 1989, 1995) 
-for cranial measurements and the Goldman dataset (Auerbach and Ruff 2004, 2006) 
-for postcranial measurements. Both datasets include thousands of 
-individuals from various geographic locations dating throughout the 
-Holocene, hence they represent several broad geographic ancestral 
-backgrounds and account for inter-population variability in sexual 
-dimorphism. SexEst can generate a prediction even when a single variable 
-is given; hence, it is applicable even on highly fragmented remains or 
-remains where not all measurements can be accurately obtained due to 
-pathological or other alterations. 
+[Light Gradient Boosting](https://lightgbm.readthedocs.io/en/latest/) (LGB).
+The training [datasets](http://volweb.utk.edu/~auerbach/DATA.htm)
+used in these machine learning classifiers are
+the William W. Howells craniometric dataset (Howells 1973, 1989, 1995)
+for cranial measurements and the Goldman dataset (Auerbach and Ruff 2004, 2006)
+for postcranial measurements. Both datasets include thousands of
+individuals from various geographic locations dating throughout the
+Holocene, hence they represent several broad geographic ancestral
+backgrounds and account for inter-population variability in sexual
+dimorphism. SexEst can generate a prediction even when a single variable
+is given; hence, it is applicable even on highly fragmented remains or
+remains where not all measurements can be accurately obtained due to
+pathological or other alterations.
 
 
-Instructions on how to use SexEst can be found by pressing the 
-**How to** button, while the contact details of the creators of the 
+Instructions on how to use SexEst can be found by pressing the
+**How to** button, while the contact details of the creators of the
 application appear when pressing the **Contact** button.
 
 
@@ -282,26 +266,26 @@ Infrastructures grant agreement no. 857645. EN's contribution was
 co-funded by the European Regional Development Fund and the
 Republic of Cyprus through the Research and Innovation Foundation
 [Project: EXCELLENCE/1216/0023]. This project has also received
-funding from the European Union's Horizon 2020 Research and 
+funding from the European Union's Horizon 2020 Research and
 Innovation Program under the grant agreement no. 811068.
 
 
-**Disclaimer:** This application is freely provided as an aid for 
-skeletal sex estimation. The authors hold no responsibility for 
-its ultimate use or misuse. As creators we try to ensure that the 
-software is theoretically grounded and statistically accurate, we 
-provide no warranty and make no specific claims as to its 
-performance or its appropriateness for use in any 
-particular situation. 
+**Disclaimer:** This application is freely provided as an aid for
+skeletal sex estimation. The authors hold no responsibility for
+its ultimate use or misuse. As creators we try to ensure that the
+software is theoretically grounded and statistically accurate, we
+provide no warranty and make no specific claims as to its
+performance or its appropriateness for use in any
+particular situation.
 
 **References**
 
-Auerbach BM, Ruff CB. 2004. Human body mass estimation: A comparison of “morphometric” and “mechanical” methods. American Journal of Physical Anthropology 125: 331-342. 
+Auerbach BM, Ruff CB. 2004. Human body mass estimation: A comparison of “morphometric” and “mechanical” methods. American Journal of Physical Anthropology 125: 331-342.
 DOI: [10.1002/ajpa.20032](https://doi.org/10.1002/ajpa.20032)
 
 
-Auerbach BM, Ruff CB. 2006. Limb bone bilateral asymmetry: variability and commonality among modern humans. Journal of 
-Human Evolution 50: 203-218. 
+Auerbach BM, Ruff CB. 2006. Limb bone bilateral asymmetry: variability and commonality among modern humans. Journal of
+Human Evolution 50: 203-218.
 DOI: [10.1016/j.jhevol.2005.09.004](https://doi.org/10.1016/j.jhevol.2005.09.004)
 
 
@@ -323,18 +307,18 @@ Howells WW. 1995. Who's Who in Skulls. Ethnic Identification of Crania from Meas
 </p>
 """
 
-# html_temp = """
-#     <div style="background-color:tomato;padding:8px">
-#     <h3 style="color:white;text-align:center;"> Results section </h3>
-#     </div>
-#     """
-# st.markdown(html_temp, unsafe_allow_html=True)
+welcome_citation = (
+    "Constantinou C, Nikita E. 2022. SexEst: An open access web\n"
+    "application for metric skeletal sex estimation.\n"
+    "International Journal of Osteoarchaeology 32: 832-844.\n"
+    "DOI: 10.1002/oa.3109"
+)
 
 padding = 0.98
 
 st.markdown(
     f""" <style>
-    .reportview-container .main .block-container{{
+    div.block-container{{
         padding-top: {padding}rem;
         padding-right: {padding}rem;
         padding-left: {padding}rem;
@@ -346,26 +330,38 @@ st.markdown(
 hide_streamlit_style = """
     <style>
     #MainMenu {visibility: hidden;}
-
-    footer {
-    position: relative;
-    left: -374px;
-    bottom: 0px;
-    text-align: center;
-    }
+    footer {visibility: hidden;}
     </style>
     """
 
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
+# Navigation / view state
+#
+# st.session_state.view drives which of the four placeholders below get
+# populated on any given rerun, so unrelated interactions (e.g. moving a
+# sidebar slider) don't clobber whatever the user was last looking at.
+
+if "view" not in st.session_state:
+    st.session_state.view = "welcome"
+
+if "result_payload" not in st.session_state:
+    st.session_state.result_payload = None
+
+if "warning_payload" not in st.session_state:
+    st.session_state.warning_payload = None
+
+
+def go_to(view_name, result_payload=None, warning_payload=None):
+    st.session_state.view = view_name
+    st.session_state.result_payload = result_payload
+    st.session_state.warning_payload = warning_payload
+
+
 placeholder_write_welcome = st.empty()
 placeholder_write_input = st.empty()
 placeholder_write_result = st.empty()
 placeholder_write_warning = st.empty()
-
-placeholder_write_welcome.markdown(welcome_text, unsafe_allow_html=True)
-
-# h1 {text-align: center; font-family:"Calibri, sans-serif";}
 
 contact_section = """
 <p class="sexest-body">
@@ -375,11 +371,11 @@ p.sexest-body {text-align: justify; margin: 10px; width: 744px}
 
 <hr style = "height:5px; border:none; color:#333; background-color:#333; margin: 10px;" />
 
-[Efthymia Nikita](https://cyi.academia.edu/EfthymiaNikita), 
-Assistant Professor in Bioarchaeology, Science and Technology in Archaeology 
-and Culture Research Center (STARC), The Cyprus Institute (<a href="mailto:e.nikita@cyi.ac.cy">e.nikita@cyi.ac.cy</a>) 
+[Efthymia Nikita](https://cyi.academia.edu/EfthymiaNikita),
+Assistant Professor in Bioarchaeology, Science and Technology in Archaeology
+and Culture Research Center (STARC), The Cyprus Institute (<a href="mailto:e.nikita@cyi.ac.cy">e.nikita@cyi.ac.cy</a>)
 
-Chrysovalantis Constantinou, Computational Scientist, Computation-based Science and Technology Research Center (CaSToRC), The Cyprus Institute (<a href="mailto:cconsta1@alumni.nd.edu">cconsta1@alumni.nd.edu</a>)
+[Chrysovalantis Constantinou](https://scholar.google.com/citations?user=b3hMHhAAAAAJ&hl=en), Computational Scientist, Computation-based Science and Technology Research Center (CaSToRC), The Cyprus Institute (<a href="mailto:cconsta1@alumni.nd.edu">cconsta1@alumni.nd.edu</a>)
 
 <hr style = "height:5px; border:none; color:#333; background-color:#333; margin: 10px;" />
 
@@ -394,59 +390,59 @@ p.sexest-body {text-align: justify; margin: 10px}
 
 <hr style = "height:5px; border:none; color:#333; background-color:#333; margin: 10px;" />
 
-SexEst has three modes of operation: a single skeleton mode, a 
-multiple skeleton mode, and a missing data mode. For each mode 
+SexEst has three modes of operation: a single skeleton mode, a
+multiple skeleton mode, and a missing data mode. For each mode
 of operation, the application accepts either postcranial or cranial measurements.
 
 
-Selecting one of the two single skeleton modes 
-(**Osteometric Prediction (single skeleton)** or **Craniometric Prediction (single skeleton)**) 
-reveals input boxes where the user can manually enter the postcranial or cranial 
-measurements. All measurements must be in millimeters (mm). The plus and minus 
-buttons allow the user to increase or decrease an input measurement by 0.5 mm. 
-Once the measurements are input, the machine learning model can be selected 
-among three available options: Extreme Gradient Boosting (XGB), Light Gradient 
-Boosting (LGB), and Linear Discriminant Analysis (LDA). Upon pressing the 
-Calculate button, the sex of the individual is estimated along with the 
-probability of being male or female; the accuracy of the model on which the 
-prediction was based is also given. Note that these modes require all 
-measurements to be present in order for the models to run; that is, they 
-cannot handle missing data. In cases of missing data, SexEst provides 
-alternative modes (see details below). 
+Selecting one of the two single skeleton modes, **Osteometric Prediction (single skeleton)**
+or **Craniometric Prediction (single skeleton)**,
+reveals input boxes where the user can manually enter the postcranial or cranial
+measurements. All measurements must be in millimeters (mm). The plus and minus
+buttons allow the user to increase or decrease an input measurement by 0.5 mm.
+Once the measurements are input, the machine learning model can be selected
+among three available options: Extreme Gradient Boosting (XGB), Light Gradient
+Boosting (LGB), and Linear Discriminant Analysis (LDA). Upon pressing the
+Calculate button, the sex of the individual is estimated along with the
+probability of being male or female; the accuracy of the model on which the
+prediction was based is also given. Note that these modes require all
+measurements to be present in order for the models to run; that is, they
+cannot handle missing data. In cases of missing data, SexEst provides
+alternative modes (see details below).
 
 
-Selecting one of the multiple skeleton modes from the sidebar 
-(**Osteometric Prediction (multiple skeletons)** or **Craniometric Prediction (multiple skeletons)**) 
-allows users to upload a CSV file containing measurements from multiple 
-skeletons so that sex is predicted for all of them simultaneously. 
-The file format must follow the example files given at the bottom of this page. 
-The file header must contain the names of the 11 postcranial variables or the 
-32 cranial variables specified in the example files. All measurements must be in 
-millimeters (mm). The CSV file can be uploaded using the drag and 
-drop feature or by 
-browsing the computer's file system. Subsequently, the user 
-must select a model (XGB, LGB, LDA), and press the Calculate button. 
-The application will output the predicted result as a table divided into a 
-Male and a Female column containing the probability that each skeleton in the 
-file belongs to a male or a female individual. Note that any rows containing 
-missing data will be dropped as the models are optimized to use all 11 variables 
-for osteometric and all 32 variables for craniometric datasets, respectively. 
+Selecting one of the multiple skeleton modes from the sidebar, **Osteometric Prediction (multiple skeletons)**
+or **Craniometric Prediction (multiple skeletons)**,
+allows users to upload a CSV file containing measurements from multiple
+skeletons so that sex is predicted for all of them simultaneously.
+The file format must follow the example files given at the bottom of this page.
+The file header must contain the names of the 11 postcranial variables or the
+32 cranial variables specified in the example files. All measurements must be in
+millimeters (mm). The CSV file can be uploaded using the drag and
+drop feature or by
+browsing the computer's file system. Subsequently, the user
+must select a model (XGB, LGB, LDA), and press the Calculate button.
+The application will output the predicted result as a table divided into a
+Male and a Female column containing the probability that each skeleton in the
+file belongs to a male or a female individual. Note that any rows containing
+missing data will be dropped as the models are optimized to use all 11 variables
+for osteometric and all 32 variables for craniometric datasets, respectively.
 In cases of missing data, SexEst provides alternative modes (see details below).
 
 
-The missing data modes (**Osteometric Prediction (missing data)** or **Craniometric 
-Prediction (missing data)**) offer the possibility to make predictions when 
-one or more variables are missing. These tabs are similar to the single 
-skeleton modes; however, the user can now enter even a single variable and 
-get a sex prediction. For postcranial data, the user can enter any combination 
-of one, two, etc. out of the 11 measurements, while for the craniometric data we 
-have selected 10 out of the original 32 variables, which are most commonly 
-employed in other studies of population-specific metric sex estimation, namely 
-**GOL, BNL, BBH, XCB, ZYB, BPL, NLH, NLB, MDH,** and **FOL**. All entered measurements 
-must be in millimeters (mm). As these modes are more computationally intensive, 
-they have been trained using only Linear Discriminant Analysis. 
+The missing data modes, **Osteometric Prediction (missing data)** or **Craniometric
+Prediction (missing data)**, offer the possibility to make predictions when
+one or more variables are missing. These tabs are similar to the single
+skeleton modes; however, the user can now enter even a single variable and
+get a sex prediction. For postcranial data, the user can enter any combination
+of one, two, etc. out of the 11 measurements, while for the craniometric data we
+have selected 10 out of the original 32 variables, which are most commonly
+employed in other studies of population-specific metric sex estimation, namely
+**GOL, BNL, BBH, XCB, ZYB, BPL, NLH, NLB, MDH,** and **FOL**. All entered measurements
+must be in millimeters (mm). As these modes are more computationally intensive,
+they have been trained using only Linear Discriminant Analysis.
 
-If you encounter any problems, please contact the creators of the 
+If you encounter any problems, please contact the creators of the
 application using the email addresses provided in the **Contact** tab.
 
 
@@ -456,46 +452,60 @@ application using the email addresses provided in the **Contact** tab.
 </p>
 """
 
-if st.sidebar.button("How to", key="how_to_button"):
-    with st.container():
-        placeholder_write_welcome.empty()
-        placeholder_write_result.empty()
-        placeholder_write_warning.empty()
+osteometric_sample_dataframe = pd.read_csv(
+    "sample_dataset_osteometric.csv", header=0, encoding="unicode_escape"
+)
+osteometric_sample_csv = osteometric_sample_dataframe.to_csv(index=False)
 
-        placeholder_write_input.markdown(how_to_section, unsafe_allow_html=True)
+craniometric_sample_dataframe = pd.read_csv(
+    "sample_dataset_craniometric.csv", header=0, encoding="unicode_escape"
+)
+craniometric_sample_csv = craniometric_sample_dataframe.to_csv(index=False)
 
-        osteometric_sample_dataframe = pd.read_csv(
-            "sample_dataset_osteometric.csv", header=0, encoding="unicode_escape"
-        )
 
-        osteometric_csv = osteometric_sample_dataframe.to_csv(index=False)
+def render_sample_download_buttons(key_prefix):
+    download_col1, download_col2 = st.columns(2)
 
-        craniometric_sample_dataframe = pd.read_csv(
-            "sample_dataset_craniometric.csv", header=0, encoding="unicode_escape"
-        )
-
-        craniometric_csv = craniometric_sample_dataframe.to_csv(index=False)
-
+    with download_col1:
         st.download_button(
             label="Download sample osteometric csv file",
-            data=osteometric_csv,
+            data=osteometric_sample_csv,
             file_name="sample_dataset_osteometric.csv",
             mime="text/csv",
+            key=f"{key_prefix}_osteometric_sample_download",
         )
 
+    with download_col2:
         st.download_button(
             label="Download sample craniometric csv file",
-            data=craniometric_csv,
+            data=craniometric_sample_csv,
             file_name="sample_dataset_craniometric.csv",
             mime="text/csv",
+            key=f"{key_prefix}_craniometric_sample_download",
         )
 
+
+def render_result_payload(payload):
+    kind = payload.get("kind")
+
+    if kind == "single":
+        placeholder_write_input.dataframe(payload["input_df"])
+        placeholder_write_result.success(payload["result_text"])
+
+    elif kind == "file":
+        placeholder_write_input.dataframe(payload["input_df"])
+        placeholder_write_result.dataframe(payload["result_df"])
+        placeholder_write_warning.success(payload["info_text"])
+
+
+if st.sidebar.button("Home", key="home_button"):
+    go_to("welcome")
+
+if st.sidebar.button("How to", key="how_to_button"):
+    go_to("how_to")
+
 if st.sidebar.button("Contact", key="contact_button"):
-    with st.container():
-        placeholder_write_welcome.empty()
-        placeholder_write_result.empty()
-        placeholder_write_warning.empty()
-        placeholder_write_input.markdown(contact_section, unsafe_allow_html=True)
+    go_to("contact")
 
 
 with st.sidebar.expander("Osteometric Prediction (single skeleton)"):
@@ -517,8 +527,6 @@ with st.sidebar.expander("Osteometric Prediction (single skeleton)"):
 
     is_all_zero_osteometric = not input_vector_goldman.all()
 
-    # print(is_all_zero_osteometric)
-
     models_goldman_list = ["<Not selected>", "XGB", "LGB", "LDA"]
     default_goldman = models_goldman_list.index("<Not selected>")
 
@@ -530,54 +538,47 @@ with st.sidebar.expander("Osteometric Prediction (single skeleton)"):
     )
 
     if st.button("Calculate", key="osteometric_single_entry_button"):
-        placeholder_write_welcome.empty()
-        placeholder_write_input.empty()
-        placeholder_write_result.empty()
-        placeholder_write_warning.empty()
-
         goldman_df = pd.DataFrame(input_vector_goldman, columns=columns_goldman)
 
         goldman_df = goldman_df.round(2)
         goldman_df = goldman_df.astype(str)
 
-        predict_proba_goldman = 0
-        accuracy_goldman = 0
-
         if model_selection_goldman == "<Not selected>" and is_all_zero_osteometric:
-            placeholder_write_warning.warning(
-                """
+            go_to(
+                "result",
+                warning_payload="""
                 Some variables are missing and no model is selected. Please enter
                 your variables and select a model.
 
-                Please note that these models have been optimized to work with 
-                all 11 variables submitted. You can try 
-                the **Osteometric Prediction (missing data)** mode 
-                if you have missing data. 
-                """
+                Please note that these models have been optimized to work with
+                all 11 variables submitted. You can try
+                the **Osteometric Prediction (missing data)** mode
+                if you have missing data.
+                """,
             )
 
         if model_selection_goldman != "<Not selected>" and is_all_zero_osteometric:
-            placeholder_write_warning.warning(
-                """
+            go_to(
+                "result",
+                warning_payload="""
                 Some variables are missing.
 
-                Please note that these models have been optimized to work with 
-                all 11 variables submitted. You can try 
-                the **Osteometric Prediction (missing data)** mode 
+                Please note that these models have been optimized to work with
+                all 11 variables submitted. You can try
+                the **Osteometric Prediction (missing data)** mode
                 if you have missing data.
-                """
+                """,
             )
 
         if model_selection_goldman == "<Not selected>" and not is_all_zero_osteometric:
-            placeholder_write_warning.warning(
-                """
+            go_to(
+                "result",
+                warning_payload="""
                 Please select a model.
-                """
+                """,
             )
 
         if model_selection_goldman != "<Not selected>" and not is_all_zero_osteometric:
-
-            placeholder_write_input.dataframe(goldman_df)
 
             if model_selection_goldman == "XGB":
                 predict_proba_goldman = xgb_model_goldman.predict_proba(
@@ -604,30 +605,31 @@ with st.sidebar.expander("Osteometric Prediction (single skeleton)"):
 
             predict_proba_goldman = predict_proba_goldman[0].tolist()
 
-            # placeholder_write_result.success(
-            #     "The probability for the sex being male is {male:.2f}% and female {female:.2f}%".format(
-            #         male=predict_proba_goldman[0], female=predict_proba_goldman[1]
-            #     )
-            # )
-
-            placeholder_write_result.success(
-                """
+            result_text = """
             ###### The probability of the individual being male is {male:.2f}% and the probability of  being female is {female:.2f}%
 
-            __The model was trained using 1528 cases. The dataset was 
-                split into a training set and a test set with 
-                proportions 70% and 30%, respectively. The model was then 
-                trained using the training 
-                set and [GridSearchCV](https://bit.ly/3F8s50E), 
-                which optimized the model's 
-                hyperparameters and cross-validated it. The trained 
-                model was then tested using the test set, 
-                achieving an accuracy of {accuracy:.2f}%.__  
+            __The model was trained using 1528 cases. The dataset was
+                split into a training set and a test set with
+                proportions 70% and 30%, respectively. The model was then
+                trained using the training
+                set and [GridSearchCV](https://bit.ly/3F8s50E),
+                which optimized the model's
+                hyperparameters and cross-validated it. The trained
+                model was then tested using the test set,
+                achieving an accuracy of {accuracy:.2f}%.__
             """.format(
-                    male=predict_proba_goldman[0],
-                    female=predict_proba_goldman[1],
-                    accuracy=accuracy_goldman,
-                )
+                male=predict_proba_goldman[0],
+                female=predict_proba_goldman[1],
+                accuracy=accuracy_goldman,
+            )
+
+            go_to(
+                "result",
+                result_payload={
+                    "kind": "single",
+                    "input_df": goldman_df,
+                    "result_text": result_text,
+                },
             )
 
 
@@ -717,53 +719,47 @@ with st.sidebar.expander("Craniometric Prediction (single skeleton)"):
     )
 
     if st.button("Calculate", key="craniometric_single_entry_button"):
-        placeholder_write_welcome.empty()
-        placeholder_write_input.empty()
-        placeholder_write_result.empty()
-        placeholder_write_warning.empty()
-
         howell_df = pd.DataFrame(input_vector_howell, columns=columns_howell)
 
         howell_df = howell_df.round(2)
         howell_df = howell_df.astype(str)
 
-        predict_proba_howell = 0
-        accuracy_howell = 0
-
         if model_selection_howell == "<Not selected>" and is_all_zero_craniometric:
-            placeholder_write_warning.warning(
-                """
+            go_to(
+                "result",
+                warning_payload="""
                 Some variables are missing and no model is selected. Please enter
                 your variables and select a model.
 
-                Please note that these models have been optimized to work with 
-                all 32 variables submitted. You can try 
-                the **Craniometric Prediction (missing data)** mode 
-                if you have missing data. 
-                """
+                Please note that these models have been optimized to work with
+                all 32 variables submitted. You can try
+                the **Craniometric Prediction (missing data)** mode
+                if you have missing data.
+                """,
             )
 
         if model_selection_howell != "<Not selected>" and is_all_zero_craniometric:
-            placeholder_write_warning.warning(
-                """
+            go_to(
+                "result",
+                warning_payload="""
                 Some variables are missing.
 
-                Please note that these models have been optimized to work with 
-                all 32 variables submitted. You can try 
-                the **Craniometric Prediction (missing data)** mode 
+                Please note that these models have been optimized to work with
+                all 32 variables submitted. You can try
+                the **Craniometric Prediction (missing data)** mode
                 if you have missing data.
-                """
+                """,
             )
 
         if model_selection_howell == "<Not selected>" and not is_all_zero_craniometric:
-            placeholder_write_warning.warning(
-                """
+            go_to(
+                "result",
+                warning_payload="""
                 Please select a model.
-                """
+                """,
             )
 
         if model_selection_howell != "<Not selected>" and not is_all_zero_craniometric:
-            placeholder_write_input.dataframe(howell_df)
 
             if model_selection_howell == "XGB":
                 predict_proba_howell = xgb_model_howell.predict_proba(
@@ -790,35 +786,37 @@ with st.sidebar.expander("Craniometric Prediction (single skeleton)"):
 
             predict_proba_howell = predict_proba_howell[0].tolist()
 
-            # placeholder_write_result.success(
-            #     "The probability for the sex being male is {male:.2f}% and female {female:.2f}%".format(
-            #         male=predict_proba_howell[0], female=predict_proba_howell[1]
-            #     )
-            # )
-
-            placeholder_write_result.success(
-                """
+            result_text = """
             ###### The probability of the individual being male is {male:.2f}% and the probability of being female is {female:.2f}%
 
-            _The model was trained using 3048 cases. The dataset was 
-                split into a training set and a test set with 
-                proportions 70% and 30%, respectively. The model was then 
-                trained using the training 
-                set and [GridSearchCV](https://bit.ly/3F8s50E), 
-                which optimized the model's 
-                hyperparameters and cross-validated it. The trained 
-                model was then tested using the test set, 
-                achieving an accuracy of {accuracy:.2f}%._ 
+            _The model was trained using 3048 cases. The dataset was
+                split into a training set and a test set with
+                proportions 70% and 30%, respectively. The model was then
+                trained using the training
+                set and [GridSearchCV](https://bit.ly/3F8s50E),
+                which optimized the model's
+                hyperparameters and cross-validated it. The trained
+                model was then tested using the test set,
+                achieving an accuracy of {accuracy:.2f}%._
             """.format(
-                    male=predict_proba_howell[0],
-                    female=predict_proba_howell[1],
-                    accuracy=accuracy_howell,
-                )
+                male=predict_proba_howell[0],
+                female=predict_proba_howell[1],
+                accuracy=accuracy_howell,
+            )
+
+            go_to(
+                "result",
+                result_payload={
+                    "kind": "single",
+                    "input_df": howell_df,
+                    "result_text": result_text,
+                },
             )
 
 with st.sidebar.expander("Osteometric Prediction (multiple skeletons)"):
 
     df_goldman_file = pd.DataFrame()
+    goldman_file_upload_error = False
 
     uploaded_file_goldman = st.file_uploader(
         "Choose a CSV file", type=["csv"], key="osteometric_uploader"
@@ -829,17 +827,12 @@ with st.sidebar.expander("Osteometric Prediction (multiple skeletons)"):
             df_goldman_file = pd.read_csv(
                 uploaded_file_goldman, usecols=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             )
+            if list(df_goldman_file.columns[:11]) != columns_goldman and set(
+                columns_goldman
+            ) - set(df_goldman_file.columns) != set():
+                goldman_file_upload_error = True
         except ValueError:
-            placeholder_write_welcome.empty()
-            placeholder_write_input.empty()
-            placeholder_write_result.empty()
-            placeholder_write_warning.warning(
-                """
-            Please check that your file's format complies with the example file format provided 
-            in the **How to** section
-            """
-            )
-            # raise ValueError("The file format is not supported")
+            goldman_file_upload_error = True
 
     models_goldman_file_list = ["<Not selected>", "XGB", "LGB", "LDA"]
     default_goldman_file = models_goldman_file_list.index("<Not selected>")
@@ -852,27 +845,35 @@ with st.sidebar.expander("Osteometric Prediction (multiple skeletons)"):
     )
 
     if st.button("Calculate", key="osteometric_file_entry_button"):
-        placeholder_write_welcome.empty()
-        placeholder_write_input.empty()
-        placeholder_write_result.empty()
-        placeholder_write_warning.empty()
 
-        if df_goldman_file.empty == True and (
+        if goldman_file_upload_error:
+            go_to(
+                "upload_error",
+                warning_payload="""
+            Please check that your file's format complies with the example file format provided
+            in the **How to** section. The header must contain the 11 postcranial
+            variable names shown below, and you can grab a correctly formatted
+            sample file using the download button underneath.
+            """,
+            )
+            st.session_state.upload_error_kind = "osteometric"
+
+        elif df_goldman_file.empty == True and (
             model_selection_goldman_file != "<Not selected>"
         ):
-            placeholder_write_warning.warning("Please upload a file")
+            go_to("result", warning_payload="Please upload a file")
 
-        if df_goldman_file.empty == True and (
+        elif df_goldman_file.empty == True and (
             model_selection_goldman_file == "<Not selected>"
         ):
-            placeholder_write_warning.warning("Please upload a file and choose a model")
+            go_to("result", warning_payload="Please upload a file and choose a model")
 
-        if (df_goldman_file.empty != True) and (
+        elif (df_goldman_file.empty != True) and (
             model_selection_goldman_file == "<Not selected>"
         ):
-            placeholder_write_warning.warning("Please select a model")
+            go_to("result", warning_payload="Please select a model")
 
-        if (df_goldman_file.empty != True) and (
+        elif (df_goldman_file.empty != True) and (
             model_selection_goldman_file != "<Not selected>"
         ):
 
@@ -884,8 +885,6 @@ with st.sidebar.expander("Osteometric Prediction (multiple skeletons)"):
             df_goldman_file = df_goldman_file.astype(str)
             predict_proba_goldman_file = []
             accuracy_goldman_file = 0
-
-            placeholder_write_input.dataframe(df_goldman_file.reset_index(drop=True))
 
             if model_selection_goldman_file == "XGB":
                 predict_proba_goldman_file = xgb_model_goldman.predict_proba(
@@ -916,35 +915,42 @@ with st.sidebar.expander("Osteometric Prediction (multiple skeletons)"):
 
             predict_proba_goldman_file.columns = ["Male", "Female"]
 
-            placeholder_write_result.dataframe(predict_proba_goldman_file)
-
-            placeholder_write_warning.info(
-                """
-                Please note that any rows containing missing data 
-                will be dropped as these models have been optimized to 
-                work with all 11 variables submitted. You can try the 
-                **Osteometric Prediction (missing data)** mode for 
+            info_text = """
+                Please note that any rows containing missing data
+                will be dropped as these models have been optimized to
+                work with all 11 variables submitted. You can try the
+                **Osteometric Prediction (missing data)** mode for
                 any cases/rows containing missing data.
 
 
-                _The model was trained using 1528 cases. The dataset was 
-                split into a training set and a test set with 
-                proportions 70% and 30%, respectively. The model was then 
-                trained using the training 
-                set and [GridSearchCV](https://bit.ly/3F8s50E), 
-                which optimized the model's 
-                hyperparameters and cross-validated it. The trained 
-                model was then tested using the test set, 
-                achieving an accuracy of {accuracy:.2f}%._ 
+                _The model was trained using 1528 cases. The dataset was
+                split into a training set and a test set with
+                proportions 70% and 30%, respectively. The model was then
+                trained using the training
+                set and [GridSearchCV](https://bit.ly/3F8s50E),
+                which optimized the model's
+                hyperparameters and cross-validated it. The trained
+                model was then tested using the test set,
+                achieving an accuracy of {accuracy:.2f}%._
                 """.format(
-                    accuracy=accuracy_goldman_file,
-                )
+                accuracy=accuracy_goldman_file,
+            )
+
+            go_to(
+                "result",
+                result_payload={
+                    "kind": "file",
+                    "input_df": df_goldman_file.reset_index(drop=True),
+                    "result_df": predict_proba_goldman_file,
+                    "info_text": info_text,
+                },
             )
 
 
 with st.sidebar.expander("Craniometric Prediction (multiple skeletons)"):
 
     df_howell_file = pd.DataFrame()
+    howell_file_upload_error = False
 
     uploaded_file_howell = st.file_uploader(
         "Choose a CSV file", type=["csv"], key="craniometric_uploader"
@@ -990,12 +996,7 @@ with st.sidebar.expander("Craniometric Prediction (multiple skeletons)"):
                 ],
             )
         except ValueError:
-            placeholder_write_warning.warning(
-                """
-            Please check that your file's format complies with the example file format provided 
-            in the **How to** section
-            """
-            )
+            howell_file_upload_error = True
 
     models_howell_file_list = ["<Not selected>", "XGB", "LGB", "LDA"]
     default_howell_file = models_howell_file_list.index("<Not selected>")
@@ -1008,27 +1009,35 @@ with st.sidebar.expander("Craniometric Prediction (multiple skeletons)"):
     )
 
     if st.button("Calculate", key="craniometric_file_entry_button"):
-        placeholder_write_welcome.empty()
-        placeholder_write_input.empty()
-        placeholder_write_result.empty()
-        placeholder_write_warning.empty()
 
-        if df_howell_file.empty == True and (
+        if howell_file_upload_error:
+            go_to(
+                "upload_error",
+                warning_payload="""
+            Please check that your file's format complies with the example file format provided
+            in the **How to** section. The header must contain the 32 cranial
+            variable names shown in the example files, and you can grab a correctly
+            formatted sample file using the download button underneath.
+            """,
+            )
+            st.session_state.upload_error_kind = "craniometric"
+
+        elif df_howell_file.empty == True and (
             model_selection_howell_file != "<Not selected>"
         ):
-            placeholder_write_warning.warning("Please upload a file")
+            go_to("result", warning_payload="Please upload a file")
 
-        if df_howell_file.empty == True and (
+        elif df_howell_file.empty == True and (
             model_selection_howell_file == "<Not selected>"
         ):
-            placeholder_write_warning.warning("Please upload a file and choose a model")
+            go_to("result", warning_payload="Please upload a file and choose a model")
 
-        if (df_howell_file.empty != True) and (
+        elif (df_howell_file.empty != True) and (
             model_selection_howell_file == "<Not selected>"
         ):
-            placeholder_write_warning.warning("Please select a model")
+            go_to("result", warning_payload="Please select a model")
 
-        if (df_howell_file.empty != True) and (
+        elif (df_howell_file.empty != True) and (
             model_selection_howell_file != "<Not selected>"
         ):
 
@@ -1041,8 +1050,6 @@ with st.sidebar.expander("Craniometric Prediction (multiple skeletons)"):
             predict_proba_howell_file = []
 
             accuracy_howell_file = 0
-
-            placeholder_write_input.dataframe(df_howell_file.reset_index(drop=True))
 
             if model_selection_howell_file == "XGB":
                 predict_proba_howell_file = xgb_model_howell.predict_proba(
@@ -1073,28 +1080,34 @@ with st.sidebar.expander("Craniometric Prediction (multiple skeletons)"):
 
             predict_proba_howell_file.columns = ["Male", "Female"]
 
-            placeholder_write_result.dataframe(predict_proba_howell_file)
-
-            placeholder_write_warning.info(
-                """
-                Please note that any rows containing missing data will be 
-                dropped as these models have been optimized to work with 
-                all 32 variables submitted. You can try the 
-                **Craniometric Prediction (missing data)** mode for 
+            info_text = """
+                Please note that any rows containing missing data will be
+                dropped as these models have been optimized to work with
+                all 32 variables submitted. You can try the
+                **Craniometric Prediction (missing data)** mode for
                 any cases/rows containing missing data.
 
-                 _The model was trained using 3048 cases. The dataset was 
-                split into a training set and a test set with 
-                proportions 70% and 30%, respectively. The model was then 
-                trained using the training 
-                set and [GridSearchCV](https://bit.ly/3F8s50E), 
-                which optimized the model's 
-                hyperparameters and cross-validated it. The trained 
-                model was then tested using the test set, 
-                achieving an accuracy of {accuracy:.2f}%._ 
+                 _The model was trained using 3048 cases. The dataset was
+                split into a training set and a test set with
+                proportions 70% and 30%, respectively. The model was then
+                trained using the training
+                set and [GridSearchCV](https://bit.ly/3F8s50E),
+                which optimized the model's
+                hyperparameters and cross-validated it. The trained
+                model was then tested using the test set,
+                achieving an accuracy of {accuracy:.2f}%._
                 """.format(
-                    accuracy=accuracy_howell_file,
-                )
+                accuracy=accuracy_howell_file,
+            )
+
+            go_to(
+                "result",
+                result_payload={
+                    "kind": "file",
+                    "input_df": df_howell_file.reset_index(drop=True),
+                    "result_df": predict_proba_howell_file,
+                    "info_text": info_text,
+                },
             )
 
 
@@ -1146,20 +1159,15 @@ with st.sidebar.expander("Osteometric Prediction (missing data)"):
     ]
 
     if st.button("Calculate", key="osteometric_single_entry_button_missing_data"):
-        placeholder_write_welcome.empty()
-        placeholder_write_input.empty()
-        placeholder_write_result.empty()
-        placeholder_write_warning.empty()
 
         predict_proba_goldman_missing = 0
 
-        # print(not input_vector_goldman_missing.any())
-
         if not input_vector_goldman_missing.any():
-            placeholder_write_warning.warning(
-                """
+            go_to(
+                "result",
+                warning_payload="""
                 Please enter a variable.
-                """
+                """,
             )
 
         else:
@@ -1193,27 +1201,32 @@ with st.sidebar.expander("Osteometric Prediction (missing data)"):
                 str
             )
 
-            placeholder_write_input.write(input_dataframe_goldman_missing)
-
-            placeholder_write_result.success(
-                """
+            result_text = """
             ###### The probability of the individual being male is {male:.2f}% and the probability of being female is {female:.2f}%
 
-            _The model was trained using 1528 ({vars}) cases. The dataset was 
-                split into a training set and a test set with 
-                proportions 70% and 30%, respectively. The model was then 
-                trained using the training 
-                set and [GridSearchCV](https://bit.ly/3F8s50E), 
-                which optimized the model's 
-                hyperparameters and cross-validated it. The trained 
-                model was then tested using the test set, 
-                achieving an accuracy of {accuracy:.2f}%._ 
+            _The model was trained using 1528 ({vars}) cases. The dataset was
+                split into a training set and a test set with
+                proportions 70% and 30%, respectively. The model was then
+                trained using the training
+                set and [GridSearchCV](https://bit.ly/3F8s50E),
+                which optimized the model's
+                hyperparameters and cross-validated it. The trained
+                model was then tested using the test set,
+                achieving an accuracy of {accuracy:.2f}%._
             """.format(
-                    male=predict_proba_goldman_missing[0],
-                    female=predict_proba_goldman_missing[1],
-                    vars=", ".join(user_vector_goldman_missing),
-                    accuracy=accuracy_goldman_missing,
-                )
+                male=predict_proba_goldman_missing[0],
+                female=predict_proba_goldman_missing[1],
+                vars=", ".join(user_vector_goldman_missing),
+                accuracy=accuracy_goldman_missing,
+            )
+
+            go_to(
+                "result",
+                result_payload={
+                    "kind": "single",
+                    "input_df": input_dataframe_goldman_missing,
+                    "result_text": result_text,
+                },
             )
 
 
@@ -1278,18 +1291,15 @@ with st.sidebar.expander("Craniometric Prediction (missing data)"):
     ]
 
     if st.button("Calculate", key="craniometric_single_entry_button_missing_data"):
-        placeholder_write_welcome.empty()
-        placeholder_write_input.empty()
-        placeholder_write_result.empty()
-        placeholder_write_warning.empty()
 
         predict_proba_howell_missing = 0
 
         if not input_vector_howell_missing.any():
-            placeholder_write_warning.warning(
-                """
+            go_to(
+                "result",
+                warning_payload="""
                 Please enter a variable.
-                """
+                """,
             )
 
         else:
@@ -1320,25 +1330,84 @@ with st.sidebar.expander("Craniometric Prediction (missing data)"):
             input_dataframe_howell_missing = input_dataframe_howell_missing.round(2)
             input_dataframe_howell_missing = input_dataframe_howell_missing.astype(str)
 
-            placeholder_write_input.write(input_dataframe_howell_missing)
-
-            placeholder_write_result.success(
-                """
+            result_text = """
             ###### The probability of the individual being male is {male:.2f}% and the probability of being female is {female:.2f}%
 
-            _The model was trained using 3048 ({vars}) cases. The dataset was 
-                split into a training set and a test set with 
-                proportions 70% and 30%, respectively. The model was then 
-                trained using the training 
-                set and [GridSearchCV](https://bit.ly/3F8s50E), 
-                which optimized the model's 
-                hyperparameters and cross-validated it. The trained 
-                model was then tested using the test set, 
-                achieving an accuracy of {accuracy:.2f}%._ 
+            _The model was trained using 3048 ({vars}) cases. The dataset was
+                split into a training set and a test set with
+                proportions 70% and 30%, respectively. The model was then
+                trained using the training
+                set and [GridSearchCV](https://bit.ly/3F8s50E),
+                which optimized the model's
+                hyperparameters and cross-validated it. The trained
+                model was then tested using the test set,
+                achieving an accuracy of {accuracy:.2f}%._
             """.format(
-                    male=predict_proba_howell_missing[0],
-                    female=predict_proba_howell_missing[1],
-                    vars=", ".join(user_vector_howell_missing),
-                    accuracy=accuracy_howell_missing,
-                )
+                male=predict_proba_howell_missing[0],
+                female=predict_proba_howell_missing[1],
+                vars=", ".join(user_vector_howell_missing),
+                accuracy=accuracy_howell_missing,
             )
+
+            go_to(
+                "result",
+                result_payload={
+                    "kind": "single",
+                    "input_df": input_dataframe_howell_missing,
+                    "result_text": result_text,
+                },
+            )
+
+
+# Single render pass, driven entirely by st.session_state.view, so that
+# whichever screen the user is on survives unrelated reruns (e.g. moving
+# a sidebar number_input) instead of being silently reset to the welcome
+# screen or cleared.
+
+current_view = st.session_state.view
+
+placeholder_write_welcome.empty()
+placeholder_write_input.empty()
+placeholder_write_result.empty()
+placeholder_write_warning.empty()
+
+if current_view == "welcome":
+    placeholder_write_welcome.markdown(welcome_text, unsafe_allow_html=True)
+    with placeholder_write_input.container():
+        st.markdown("**Cite this work**")
+        st.code(welcome_citation, language=None)
+
+elif current_view == "how_to":
+    with placeholder_write_welcome.container():
+        st.markdown(how_to_section, unsafe_allow_html=True)
+        render_sample_download_buttons(key_prefix="how_to")
+
+elif current_view == "contact":
+    placeholder_write_welcome.markdown(contact_section, unsafe_allow_html=True)
+
+elif current_view == "upload_error":
+    with placeholder_write_warning.container():
+        st.warning(st.session_state.warning_payload)
+        upload_error_kind = st.session_state.get("upload_error_kind")
+        if upload_error_kind == "osteometric":
+            st.download_button(
+                label="Download sample osteometric csv file",
+                data=osteometric_sample_csv,
+                file_name="sample_dataset_osteometric.csv",
+                mime="text/csv",
+                key="upload_error_osteometric_sample_download",
+            )
+        elif upload_error_kind == "craniometric":
+            st.download_button(
+                label="Download sample craniometric csv file",
+                data=craniometric_sample_csv,
+                file_name="sample_dataset_craniometric.csv",
+                mime="text/csv",
+                key="upload_error_craniometric_sample_download",
+            )
+
+elif current_view == "result":
+    if st.session_state.warning_payload is not None:
+        placeholder_write_warning.warning(st.session_state.warning_payload)
+    if st.session_state.result_payload is not None:
+        render_result_payload(st.session_state.result_payload)
