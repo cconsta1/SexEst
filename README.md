@@ -1,7 +1,7 @@
 # SexEst
 
-> **Live app (primary):** https://sexest.onrender.com/
-> The original CyI-hosted instance (http://sexest.cyi.ac.cy/) is currently experiencing downtime. Use the Render link above.
+> **Live app (primary):** https://sexest.cyi.ac.cy/
+> Also available as a mirror on Render: https://sexest.onrender.com/
 
 Short description
 - SexEst is an open-source Streamlit web application for predicting biological sex from skeletal measurements using pre-trained machine learning models (XGBoost, LightGBM, Linear Discriminant Analysis).
@@ -10,8 +10,8 @@ Background
 - Skeletal sex estimation is an essential step in osteoarchaeological and forensic contexts. This project (1) evaluates multiple machine-learning classifiers on worldwide cranial and postcranial measurements and (2) deploys the best-performing models in a free web application for straightforward sex prediction of unknown skeletons. Selected text from the paper: “Skeletal sex estimation is an essential step in any osteoarcheological study... The models offering the highest rates of correct sex classification (Extreme Gradient Boosting, Light Gradient Boosting, and Linear Discriminant Analysis) were then selected to construct an open access and open source web application, SexEst.”
 
 Key links
-- Live app (Render, primary): https://sexest.onrender.com/
-- Live app (CyI, currently down): http://sexest.cyi.ac.cy/
+- Live app (CyI, primary): https://sexest.cyi.ac.cy/
+- Live app (Render, mirror): https://sexest.onrender.com/
 - Paper / DOI: https://doi.org/10.1002/oa.3109
 - Model training notebooks: https://github.com/cconsta1/SexEst_Notebooks.git
 - Original datasets (Goldman & Howells): https://web.utk.edu/~auerbach/DATA.htm
@@ -43,6 +43,25 @@ docker build -f Dockerfile -t app:latest .
 docker run -p 8501:8501 app:latest
 ```
 Visit http://localhost:8501/ (or the mapped host port) once the container is running.
+
+Docker on Apple Silicon (M1/M2/M3/M4)
+- On an Apple Silicon Mac the plain build above fails while installing `lightgbm==3.1.1`, with:
+  ```
+  FileNotFoundError: [Errno 2] No such file or directory: 'cmake': 'cmake'
+  Exception: Please install CMake and all required dependencies first
+  ```
+  LightGBM 3.1.1 publishes no `arm64`/`aarch64` wheel, so pip falls back to building it from source, and the `python:3.7` base image has no CMake. Build for `linux/amd64` instead, so pip finds the prebuilt x86_64 wheel and skips compiling:
+```bash
+docker build --platform linux/amd64 -f Dockerfile -t app:latest .
+docker run --platform linux/amd64 -p 8501:8501 app:latest
+```
+  The container then runs under emulation (Rosetta), which is slower to start but fine for local use.
+- If you would rather build natively on `arm64`, add CMake and a toolchain to the image so LightGBM can compile:
+```dockerfile
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cmake build-essential \
+    && rm -rf /var/lib/apt/lists/*
+```
 
 Notes on models and data
 - The app uses pre-trained models; training notebooks used to produce those models are available at https://github.com/cconsta1/SexEst_Notebooks.git. The original training datasets (Goldman osteometric and Howells craniometric) are freely available from Dr. B. Auerbach: https://web.utk.edu/~auerbach/DATA.htm — please follow the dataset owners' citation guidelines if you reuse the data.

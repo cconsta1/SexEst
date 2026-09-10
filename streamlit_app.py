@@ -19,12 +19,15 @@
    sidebar labels to vanish; reworked navigation to use st.session_state
    so results and screens persist correctly across reruns; cached model
    loading; refreshed dependencies and contact info; general polish.
+ + 09/10/26 (cc): Sidebar menus now behave as an accordion, so opening
+   one prediction mode collapses the others.
 """
 
 import numpy as np
 import pickle
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import toml
 import os
 
@@ -81,6 +84,110 @@ expander_configuration = f"""
 """
 
 st.markdown(expander_configuration, unsafe_allow_html=True)
+
+# Accordion behaviour for the sidebar menus
+#
+# Streamlit expanders never report their open/closed state back to Python,
+# so one-at-a-time behaviour has to be done in the browser. The script below
+# is injected into the page and watches for clicks on any sidebar expander
+# header; when one is opened, every other sidebar expander is collapsed.
+#
+# This is purely cosmetic: it touches no widget values, no session state and
+# no model code. If a future Streamlit release renames these DOM hooks the
+# script simply stops matching and the menus fall back to the old behaviour
+# of staying open independently.
+
+accordion_script = """
+<script>
+(function () {
+    const doc = window.parent.document;
+
+    function sidebar() {
+        return doc.querySelector('section[data-testid="stSidebar"]');
+    }
+
+    // Streamlit has used a few different DOM shapes for expanders over the
+    // years: a native <details> element in recent versions, and a clickable
+    // header div in older ones. Collect whichever is present.
+    function panels() {
+        const root = sidebar();
+        if (!root) return [];
+
+        const details = Array.from(root.querySelectorAll('details'));
+        if (details.length) {
+            return details.map(function (el) {
+                return {
+                    el: el,
+                    isOpen: function () { return el.open; },
+                    close: function () { el.open = false; }
+                };
+            });
+        }
+
+        const headers = Array.from(root.querySelectorAll(
+            '.streamlit-expanderHeader, [data-testid="stExpanderToggleIcon"]'
+        )).map(function (h) {
+            return h.closest('.streamlit-expander, [data-testid="stExpander"]') || h.parentElement;
+        }).filter(Boolean);
+
+        return Array.from(new Set(headers)).map(function (el) {
+            const header = el.querySelector('.streamlit-expanderHeader') || el;
+            return {
+                el: el,
+                isOpen: function () {
+                    return header.getAttribute('aria-expanded') === 'true';
+                },
+                close: function () {
+                    if (header.getAttribute('aria-expanded') === 'true') {
+                        header.click();
+                    }
+                }
+            };
+        });
+    }
+
+    function collapseOthers(opened) {
+        panels().forEach(function (p) {
+            if (p.el !== opened && p.isOpen()) {
+                p.close();
+            }
+        });
+    }
+
+    // One delegated listener on the sidebar, so it keeps working as
+    // Streamlit tears down and rebuilds the DOM on each rerun.
+    function attach() {
+        const root = sidebar();
+        if (!root || root.dataset.sexestAccordion === '1') return;
+        root.dataset.sexestAccordion = '1';
+
+        root.addEventListener('click', function (event) {
+            const match = panels().filter(function (p) {
+                return p.el.contains(event.target);
+            })[0];
+            if (!match) return;
+
+            const header = event.target.closest(
+                'summary, .streamlit-expanderHeader, [data-testid="stExpanderToggleIcon"]'
+            );
+            if (!header) return;
+
+            // The click hasn't been applied yet, so read the new state next tick.
+            setTimeout(function () {
+                if (match.isOpen()) collapseOthers(match.el);
+            }, 0);
+        }, true);
+    }
+
+    attach();
+    // Streamlit replaces the sidebar on rerun; re-attach when that happens.
+    new MutationObserver(attach).observe(doc.body, { childList: true, subtree: true });
+})();
+</script>
+"""
+
+components.html(accordion_script, height=0)
+
 
 download_button_configuration = f"""
 <style>
